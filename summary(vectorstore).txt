@@ -1,0 +1,222 @@
+LangChain Vector Store & Retriever Code — Complete Function & Keyword Notes
+1️⃣ from langchain.document_loaders import PyPDFLoader
+
+Loads PDF documents and splits them into readable text chunks.
+
+Converts each page into a LangChain Document object (with metadata).
+
+🗣 Used to extract textual data from PDFs for embedding and retrieval.
+
+2️⃣ from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+Splits long documents into smaller overlapping text chunks (tokens).
+
+Parameters:
+
+chunk_size → max characters per chunk.
+
+chunk_overlap → overlap between consecutive chunks to preserve context.
+
+🧠 Chunking prevents token overflow and maintains semantic continuity.
+
+3️⃣ from langchain.embeddings import HuggingFaceEmbeddings
+
+Creates numerical vector embeddings using HuggingFace transformer models.
+
+Converts text into high-dimensional vectors that capture semantic meaning.
+
+🗣 Essential for building a searchable vector database.
+
+4️⃣ from langchain.vectorstores import FAISS
+
+Imports the FAISS (Facebook AI Similarity Search) integration.
+
+FAISS stores all embeddings in a vector index and allows fast similarity search.
+
+🧠 Core engine for retrieval-based Q&A.
+
+5️⃣ from langchain.vectorstores import Chroma
+
+Optional vector store alternative to FAISS.
+
+Supports persistent storage and filtering capabilities.
+
+🗣 Used when you need to save the index permanently (e.g., on disk).
+
+6️⃣ from langchain.llms import OpenAI / from langchain_groq import ChatGroq
+
+Loads the LLM model used to generate final answers.
+
+Either OpenAI or Groq can be used as the language reasoning component.
+
+🧠 Embeddings → retriever → model → answer.
+
+7️⃣ docs = loader.load()
+
+Loads all pages from the given PDF(s) and returns a list of Document objects.
+
+Each document contains page_content and metadata.
+
+🗣 Transforms unstructured files into structured LangChain docs.
+
+8️⃣ text_splitter.split_documents(docs)
+
+Applies chunking to break large docs into smaller, overlapping segments.
+
+These chunks become the units for embedding and retrieval.
+
+🧠 Improves retrieval accuracy by keeping context size manageable.
+
+9️⃣ embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+Loads a specific sentence embedding model from HuggingFace.
+
+Creates a reusable embedding generator.
+
+🗣 Encodes each chunk into a 384-dimensional semantic vector.
+
+🔟 db = FAISS.from_documents(docs, embeddings)
+
+Builds a FAISS index directly from documents and their embeddings.
+
+Automatically computes and stores embeddings in vector form.
+
+🧠 Initializes your searchable knowledge base.
+
+11️⃣ db.save_local("faiss_index")
+
+Saves the FAISS index to disk (for later reuse).
+
+Creates metadata and binary index files.
+
+🗣 Used for persistence and quick reloads.
+
+12️⃣ db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+
+Reloads the FAISS index from disk.
+
+Reconnects it to the embedding model for new queries.
+
+🧠 Lets you reuse trained indices without recomputing embeddings.
+
+13️⃣ query = "What is the purpose of this research paper?"
+
+Example user query string to retrieve relevant document chunks.
+
+🗣 Used to test the retriever.
+
+14️⃣ docs = db.similarity_search(query, k=3)
+
+Performs a vector similarity search.
+
+Returns the top-3 chunks whose embeddings are most similar to the query vector.
+
+🧠 Key step of retrieval — finds the most semantically related context.
+
+15️⃣ from langchain.chains import RetrievalQA
+
+A LangChain chain combining a retriever + LLM.
+
+Automates the retrieval + question answering process.
+
+🗣 Implements the RAG (Retrieval-Augmented Generation) pattern.
+
+16️⃣ qa = RetrievalQA.from_chain_type(llm=model, chain_type="stuff", retriever=db.as_retriever())
+
+Builds a RetrievalQA pipeline:
+
+llm → model used for answer generation.
+
+retriever → database (FAISS/Chroma) that fetches context.
+
+chain_type="stuff" → means all retrieved chunks are concatenated (“stuffed”) into one context string.
+
+🧠 Simplifies RAG logic into one callable object.
+
+17️⃣ qa.run(query) / qa.invoke({"query": query})
+
+Sends the query through the retriever → LLM → response flow.
+
+Retrieves context, formats it, and generates the final answer.
+
+🗣 Produces accurate, context-based responses.
+
+18️⃣ vectorstore.as_retriever(search_kwargs={"k": 5})
+
+Converts a vectorstore (FAISS or Chroma) into a retriever with custom search parameters.
+
+k defines how many top results to fetch for each query.
+
+🧠 Used when you need to fine-tune recall precision.
+
+19️⃣ persist_directory = "chroma_db"
+
+Defines the folder where Chroma DB data will be stored.
+
+Enables long-term persistence between runs.
+
+🗣 Used with Chroma persistent databases.
+
+20️⃣ retriever = db.as_retriever(search_type="similarity", search_kwargs={"k": 4})
+
+Configures the retriever to use similarity search and return top-4 similar chunks.
+
+🧠 Gives control over retrieval behavior.
+
+21️⃣ docs = retriever.get_relevant_documents(query)
+
+Directly fetches relevant context documents without generating an answer.
+
+Useful for debugging or previewing retrieved text.
+
+🗣 Lets you inspect what content the model sees.
+
+22️⃣ prompt = PromptTemplate(template="Answer the following question using the context: {context}\nQuestion: {question}", input_variables=["context", "question"])
+
+Defines a custom question-answering prompt.
+
+{context} → inserted retrieved document text.
+
+{question} → user query.
+
+🧠 Controls how context and question are formatted before sending to the model.
+
+23️⃣ chain = LLMChain(llm=model, prompt=prompt)
+
+Creates a chain that uses the model and your custom prompt to generate the final answer.
+
+🗣 Custom RAG pipeline for controlled responses.
+
+24️⃣ docs_content = " ".join([doc.page_content for doc in docs])
+
+Joins retrieved chunks into a single text block for prompt input.
+
+🧠 Prepares the retrieved data for model input.
+
+25️⃣ chain.run(context=docs_content, question=query)
+
+Executes the final chain — feeds retrieved context + query to LLM.
+
+Returns the final generated answer.
+
+🗣 Completes the RAG flow end-to-end.
+
+🔁 Overall Flow Summary
+PDF/Text Data → Loader → Text Splitter → Embeddings → Vector Store (FAISS/Chroma)
+     ↓
+User Query → Retriever (similarity search)
+     ↓
+Top-K Chunks → LLM (Groq/OpenAI)
+     ↓
+Prompt + Context → Answer (context-aware response)
+
+💬 Interview Summary (You Can Say This)
+
+“In my vector-based chatbot, I implemented Retrieval-Augmented Generation using LangChain.
+I used PyPDFLoader to extract text from documents, RecursiveCharacterTextSplitter to chunk the text, and HuggingFaceEmbeddings to convert each chunk into semantic vectors.
+These embeddings were stored in FAISS, which supports fast similarity searches.
+
+For querying, I used RetrievalQA with a retriever built from FAISS.
+When a user asks a question, the system performs similarity search, retrieves the most relevant chunks, and passes them to the LLM through a structured prompt.
+
+This architecture enables context-aware question answering across documents — a classic RAG pipeline. It’s efficient, modular, and scalable for enterprise-grade search applications.”
